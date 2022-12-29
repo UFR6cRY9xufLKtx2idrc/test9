@@ -6,6 +6,7 @@ on:
       - l10n_dev
   release:
     types: [prereleased]
+  workflow_dispatch:
 
 jobs:
   check_commit_msg:
@@ -14,7 +15,7 @@ jobs:
     name: Check if the workflow has been disabled.
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Get commit message
         id: get_message
         run: |
@@ -25,12 +26,14 @@ jobs:
     if: ${{ !contains( needs.check_commit_msg.outputs.commit_message, '!QT6') }}
     strategy:
       matrix:
-        ui_type: [QWidget, QML]
-        platform: [ubuntu-20.04, windows-latest]
+        ui_type: [QWidget]
+        platform: [windows-latest]
+        arch: [x64]
         build_type: [RelWithDebInfo, Release]
-        qt_version: [6.0.0]
+        qt_version: [6.4.1]
         include:
           - platform: windows-latest
+            arch: x64
             qtarch: win64_msvc2019_64
       fail-fast: false
 
@@ -46,40 +49,38 @@ jobs:
         shell: bash
         run: echo ::set-output name=VERSION::$(echo $GITHUB_REF | cut -d / -f 3)
       - name: Checking out sources
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           submodules: 'recursive'
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+          architecture: ${{ matrix.arch }}
       # =========================================================================================================
       - name: Install MSVC compiler
         if: matrix.platform == 'windows-latest'
         uses: ilammy/msvc-dev-cmd@v1
         with:
           # 14.1 is for vs2017, 14.2 is vs2019, following the upstream vcpkg build from Qv2ray-deps repo
-          toolset: 14.2
-          arch: x64
-      - name: Install Python
-        uses: actions/setup-python@v1
-        with:
-          python-version: "3.7"
-          architecture: x64
+          toolset: 14.29
+          arch: ${{ matrix.arch }}
       - name: Cache Qt
         id: cache-qt
-        uses: actions/cache@v1
+        uses: actions/cache@v3
         with:
           path: ../Qt
-          key: QtCache-${{ matrix.platform }}-${{ matrix.qt_version }}
-      - name: Installing Qt
-        uses: jurplel/install-qt-action@v2
+          key: QtCache-${{ matrix.platform }}-${{ matrix.arch }}-${{ matrix.qt_version }}
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v3
         with:
           version: ${{ matrix.qt_version }}
           arch: ${{ matrix.qtarch }}
           cached: ${{ steps.cache-qt.outputs.cache-hit }}
       # =========================================================================================================
       - name: Linux - ${{ matrix.qt_version }} - Build preparation - Install Packages
-        if: matrix.platform == 'ubuntu-20.04'
+        if: matrix.platform == 'ubuntu-latest'
         run: |
-          #sudo add-apt-repository ppa:webispy/grpc
-          #sudo add-apt-repository ppa:carsten-uppenbrink-net/openssl
           sudo apt update
           sudo apt install -y libgl-dev libx11-dev libxkbcommon-x11-dev libxcb-image0-dev libxcb-icccm4-dev libssl-dev libxcb-keysyms1 libxcb-render-util0 libxcb-xinerama0
           sudo apt install -y libprotobuf-dev protobuf-compiler protobuf-c-compiler libgrpc++-dev protobuf-compiler-grpc ninja-build fcitx-frontend-qt5 libcurl4-openssl-dev
@@ -94,24 +95,23 @@ jobs:
           cmake .. -DCMAKE_BUILD_TYPE=Release; cmake --build .
           cp -v ./macdeployqt ${Qt6_DIR}/bin/macdeployqt
       # --------------------------------------------------------
-      - name: Win - ${{ matrix.qt_version }} - Setup Ninja
+      - name: Win - ${{ matrix.arch }} - ${{ matrix.qt_version }} - Setup Ninja
         if: matrix.platform == 'windows-latest'
         uses: ashutoshvarma/setup-ninja@master
         with:
           # ninja version to download. Default: 1.10.0
-          version: 1.10.0
-      - name: Win- - ${{ matrix.qt_version }} - Build preparation - Download Dependencies
+          version: 1.11.1
+      - name: Win-${{ matrix.arch }} - ${{ matrix.qt_version }} - Build preparation - Download Dependencies
         shell: bash
         if: matrix.platform == 'windows-latest'
         run: |
           cd ./libs
-          ./setup-libs.sh windows x64
+          ./setup-libs.sh windows ${{ matrix.arch }}
       # ========================================================================================================= Generate MakeFile and Build
-
-      - uses: actions/setup-node@v1
+      - uses: actions/setup-node@v3
         if: matrix.platform == 'macos-latest'
         with:
-          node-version: "12.x"
+          node-version: "16"
       - run: npm install -g appdmg
         if: matrix.platform == 'macos-latest'
       - name: macOS - ${{ matrix.qt_version }} - Generate Dependencies and Build
@@ -154,8 +154,11 @@ jobs:
           cp -v ./*.pdb ./deployment || true
       # --------------------------------------------------------
       - name: Linux - ${{ matrix.qt_version }} - Generate Dependencies and Build
-        if: matrix.platform == 'ubuntu-20.04'
+        if: matrix.platform == 'ubuntu-latest'
         shell: bash
+        env:
+          CC: /usr/bin/gcc-9
+          CXX: /usr/bin/g++-9
         run: |
           mkdir build
           cd build
@@ -169,7 +172,7 @@ jobs:
           cmake --install .
       # ========================================================================================================= Deployments
       - name: Linux - ${{ matrix.qt_version }} - Generating AppImage
-        if: false #matrix.platform == 'ubuntu-20.04'
+        if: matrix.platform == 'ubuntu-latest'
         run: |
           cd build
           cd AppDir
@@ -193,55 +196,55 @@ jobs:
             -extra-plugins=iconengines,imageformats,platforminputcontexts
           mv ./Qv2ray*.AppImage ./Qv2ray.AppImage
       - name: Linux - ${{ matrix.qt_version }} - Uploading Artifact
-        if: false #matrix.platform == 'ubuntu-20.04'
-        uses: actions/upload-artifact@master
+        if: matrix.platform == 'ubuntu-latest'
+        uses: actions/upload-artifact@v3
         with:
           name: Qv2ray-${{ github.sha }}.linux-${{ matrix.ui_type }}.qt${{ matrix.qt_version }}-${{ matrix.build_type }}.AppImage
           path: build/Qv2ray.AppImage
       - name: Linux - ${{ matrix.qt_version }} - Upload binaries to release
-        uses: svenstaro/upload-release-action@v1-release
-        if: false #github.event_name == 'release' && matrix.platform == 'ubuntu-20.04' && matrix.ui_type == 'QWidget' && matrix.qt_version == '6.0.0' && matrix.build_type == 'Release'
+        uses: svenstaro/upload-release-action@v2
+        if: matrix.platform == 'ubuntu-latest'
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: build/Qv2ray.AppImage
-          asset_name: Qv2ray.${{ steps.get_version.outputs.VERSION }}.Qt6.Linux.AppImage
+          asset_name: Qv2ray.${{ steps.get_version.outputs.VERSION }}.Qt6.Linux-${{ matrix.ui_type }}-${{ matrix.build_type }}.AppImage
           tag: ${{ github.ref }}
           overwrite: true
       # --------------------------------------------------------
       - name: macOS - ${{ matrix.qt_version }} - Uploading Artifact
         if: matrix.platform == 'macos-latest'
-        uses: actions/upload-artifact@master
+        uses: actions/upload-artifact@v3
         with:
           name: Qv2ray-${{ github.sha }}.macOS-${{ matrix.ui_type }}.qt${{ matrix.qt_version }}-${{ matrix.build_type }}.dmg
           path: Qv2ray.dmg
       - name: macOS - ${{ matrix.qt_version }} - Upload binaries to release
-        uses: svenstaro/upload-release-action@v1-release
-        if: github.event_name == 'release' && matrix.platform == 'macos-latest' && matrix.ui_type == 'QWidget' && matrix.qt_version == '6.0.0' && matrix.build_type == 'Release'
+        uses: svenstaro/upload-release-action@v2
+        if: matrix.platform == 'macos-latest'
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: Qv2ray.dmg
-          asset_name: Qv2ray.${{ steps.get_version.outputs.VERSION }}.Qt6.macOS.dmg
+          asset_name: Qv2ray.${{ steps.get_version.outputs.VERSION }}.Qt6.macOS-${{ matrix.ui_type }}-${{ matrix.build_type }}.dmg
           tag: ${{ github.ref }}
           overwrite: true
       # --------------------------------------------------------
-      - name: Win - ${{ matrix.qt_version }} - Create 7z Release
+      - name: Win-${{ matrix.arch }} - ${{ matrix.qt_version }} - Create 7z Release
         if: matrix.platform == 'windows-latest'
         uses: DuckSoft/create-7z-action@v1.0
         with:
           pathSource: ./build/deployment/
           pathTarget: ./release.7z
-      - name: Win - ${{ matrix.qt_version }} - Uploading Artifact
+      - name: Win-${{ matrix.arch }} - ${{ matrix.qt_version }} - Uploading Artifact
         if: matrix.platform == 'windows-latest'
-        uses: actions/upload-artifact@master
+        uses: actions/upload-artifact@v3
         with:
           name: Qv2ray-${{ github.sha }}.Windows-${{ matrix.ui_type }}.qt${{ matrix.qt_version }}-${{ matrix.build_type }}.7z
           path: release.7z
-      - name: Win - ${{ matrix.qt_version }} - Upload binaries to release
-        uses: svenstaro/upload-release-action@v1-release
-        if: github.event_name == 'release' && matrix.platform == 'windows-latest' && matrix.ui_type == 'QWidget' && matrix.qt_version == '6.0.0' && matrix.build_type == 'Release'
+      - name: Win-${{ matrix.arch }} - ${{ matrix.qt_version }} - Upload binaries to release
+        uses: svenstaro/upload-release-action@v2
+        if: matrix.platform == 'windows-latest'
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: release.7z
-          asset_name: Qv2ray.${{ steps.get_version.outputs.VERSION }}.Qt6.Windows.7z
+          asset_name: Qv2ray.${{ steps.get_version.outputs.VERSION }}.Qt6.Windows-${{ matrix.ui_type }}-${{ matrix.build_type }}.7z
           tag: ${{ github.ref }}
           overwrite: true
