@@ -71,7 +71,7 @@ namespace Qv2ray::core::kernel
         }
     }
 
-    std::pair<int, QString> RunProcess_(QString const& exec, QStringList const& args) {
+    std::pair<int, QString> RunProcess_(QString const& exec, QString const& args) {
         QProcess proc;
 #ifdef Q_OS_WIN32
         // nativeArguments are required for Windows platform, without a
