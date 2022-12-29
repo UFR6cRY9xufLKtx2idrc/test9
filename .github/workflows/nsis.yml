@@ -6,6 +6,7 @@ on:
       - l10n_dev
   release:
     types: [prereleased]
+  workflow_dispatch:
 
 jobs:
   check_commit_msg:
@@ -14,7 +15,7 @@ jobs:
     name: Check if the workflow has been disabled.
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Get commit message
         id: get_message
         run: |
@@ -25,7 +26,7 @@ jobs:
     if: ${{ !contains( needs.check_commit_msg.outputs.commit_message, '!NSIS') }}
     strategy:
       matrix:
-        qt_version: [5.15.0]
+        qt_version: [6.4.1]
         platform: [windows-latest]
         arch: [x64]
         include:
@@ -46,44 +47,43 @@ jobs:
         shell: bash
         run: echo ::set-output name=VERSION::$(echo $GITHUB_REF | cut -d / -f 3)
       - name: Checking out sources
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           submodules: 'recursive'
-      - name: Install Python 3.7 version
-        uses: actions/setup-python@v1
+      - name: Setup Python
+        uses: actions/setup-python@v4
         with:
-          python-version: "3.7"
+          python-version: "3.11"
           architecture: ${{ matrix.arch }}
       # =========================================================================================================
       - name: Install MSVC compiler
         uses: ilammy/msvc-dev-cmd@v1
         with:
           # 14.1 is for vs2017, 14.2 is vs2019, following the upstream vcpkg build from Qv2ray-deps repo
-          toolset: 14.2
+          toolset: 14.29
           arch: ${{ matrix.arch }}
       - name: Cache Qt
         id: cache-qt
-        uses: actions/cache@v1
+        uses: actions/cache@v3
         with:
           path: ../Qt
           key: QtCache-${{ matrix.platform }}-${{ matrix.arch }}-${{ matrix.qt_version }}
-      - name: Installing Qt - ${{ matrix.arch }}
-        uses: jurplel/install-qt-action@v2
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v3
         with:
           version: ${{ matrix.qt_version }}
           arch: ${{ matrix.qtarch }}
-          mirror: "http://mirrors.ocf.berkeley.edu/qt/"
           cached: ${{ steps.cache-qt.outputs.cache-hit }}
       # =========================================================================================================
       - name: Win-${{ matrix.arch }} - ${{ matrix.qt_version }} - Setup Ninja
         uses: ashutoshvarma/setup-ninja@master
         with:
           # ninja version to download. Default: 1.10.0
-          version: 1.10.0
+          version: 1.11.1
       - name: Win-${{ matrix.arch }} - ${{ matrix.qt_version }} - Build preparation - Download Dependencies
         shell: bash
         run: |
-          cd libs
+          cd ./libs
           ./setup-libs.sh windows ${{ matrix.arch }}
       # ========================================================================================================= Generate MakeFile and Build
       - name: Win-${{ matrix.arch }} - ${{ matrix.qt_version }} - Generate Dependencies and Build
@@ -94,7 +94,7 @@ jobs:
         run: |
           mkdir build
           cd build
-          cmake .. -GNinja -DCMAKE_BUILD_TYPE=Release -DBUILD_NSIS=ON
+          cmake .. -GNinja -DCMAKE_BUILD_TYPE=Release -DBUILD_NSIS=ON -DQV2RAY_QT6=ON
           cmake --build . --target package --parallel $(nproc)
       - name: Windows - Get package name
         shell: bash
@@ -102,13 +102,12 @@ jobs:
         run: |
           echo ::set-output name=NAME::$(basename build/qv2ray-*.exe)
       - name: Win-${{ matrix.arch }} - ${{ matrix.qt_version }} - uploading artifact
-        uses: actions/upload-artifact@master
+        uses: actions/upload-artifact@v3
         with:
           name: Qv2ray-${{ github.sha }}.Windows-${{ matrix.arch }}.qt${{ matrix.qt_version }}.exe
           path: build/${{ steps.get_package.outputs.NAME }}
       - name: Win-${{ matrix.arch }} - ${{ matrix.qt_version }} - Upload binaries to release
-        uses: svenstaro/upload-release-action@v1-release
-        if: github.event_name == 'release'
+        uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
           file: build/${{ steps.get_package.outputs.NAME }}
