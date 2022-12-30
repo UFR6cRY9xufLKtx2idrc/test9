@@ -383,7 +383,6 @@ namespace Qv2ray::core::handler
         if (!hasDNS)
         {
             root.insert("dns", GenerateDNS(dnsConf));
-            root.insert("fakedns", fakeDNSConf.toJson());
             LOG("Added global DNS config");
         }
 
