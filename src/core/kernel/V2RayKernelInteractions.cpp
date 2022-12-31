@@ -167,7 +167,7 @@ namespace Qv2ray::core::kernel
             return { false, tr("No geosite.dat in assets path.") };
 
         // Check if V2Ray core returns a version number correctly.
-        auto [exitCode, output] = RunProcess_(corePath, {"version"});
+        auto [exitCode, output] = RunProcess_(corePath, {"--version"});
 
         LOG("V2Ray output: " + SplitLines(output).join(";"));
 
@@ -186,10 +186,17 @@ namespace Qv2ray::core::kernel
         {
             // find 5.0+ cli api
             std::tie(exitCode, output) = RunProcess_(corePath, {"version"});
-            if (exitCode != 0)
-                return { false, tr("V2Ray core failed with an exit code: ") + QSTRN(exitCode) };
 
             LOG("V2Ray output: " + SplitLines(output).join(";"));
+
+            if (SplitLines(output).isEmpty())
+                return { false, tr("V2Ray core returns empty string.") };
+
+            KernelVersioning_(output);
+            return { true, SplitLines(output).at(0) };
+
+            if (exitCode != 0)
+                return { false, tr("V2Ray core failed with an exit code: ") + QSTRN(exitCode) };
         } else {
             return { false, tr("V2Ray core failed with an exit code: ") + QSTRN(exitCode) };
         }
@@ -222,7 +229,7 @@ namespace Qv2ray::core::kernel
             switch (version)
             {
                 case Qv2rayConfig_Kernel::FOUR: args = QStringList{ "-test", "-config", path }; break;
-                case Qv2rayConfig_Kernel::FIVE: args = QStringList{ "test", "-c", path }; break;
+                case Qv2rayConfig_Kernel::FIVE: args = QStringList{ "test", "-config", path }; break;
                 case Qv2rayConfig_Kernel::UNKNOWN:
                 {
                     // actually impossible, cause `ValidateConfig`'s already
