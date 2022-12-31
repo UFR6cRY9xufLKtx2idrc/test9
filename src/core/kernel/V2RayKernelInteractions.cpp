@@ -167,7 +167,7 @@ namespace Qv2ray::core::kernel
             return { false, tr("No geosite.dat in assets path.") };
 
         // Check if V2Ray core returns a version number correctly.
-        auto [exitCode, output] = RunProcess_(corePath, {"--version"});
+        auto [exitCode, output] = RunProcess_(corePath, {"version"});
 
         LOG("V2Ray output: " + SplitLines(output).join(";"));
 
