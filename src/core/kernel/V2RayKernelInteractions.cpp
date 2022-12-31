@@ -222,7 +222,7 @@ namespace Qv2ray::core::kernel
             switch (version)
             {
                 case Qv2rayConfig_Kernel::FOUR: args = QStringList{ "-test", "-config", path }; break;
-                case Qv2rayConfig_Kernel::FIVE: args = QStringList{ "test", "-config", path }; break;
+                case Qv2rayConfig_Kernel::FIVE: args = QStringList{ "test", "-c", path }; break;
                 case Qv2rayConfig_Kernel::UNKNOWN:
                 {
                     // actually impossible, cause `ValidateConfig`'s already
