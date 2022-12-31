@@ -185,7 +185,7 @@ namespace Qv2ray::core::kernel
         if (output.startsWith("flag provided but not defined"))
         {
             // find 5.0+ cli api
-            std::tie(exitCode, output) = RunProcess_(corePath, {"version"});
+            auto [exitCode, output] = RunProcess_(corePath, {"version"});
 
             LOG("V2Ray output: " + SplitLines(output).join(";"));
 
@@ -194,9 +194,6 @@ namespace Qv2ray::core::kernel
 
             KernelVersioning_(output);
             return { true, SplitLines(output).at(0) };
-
-            if (exitCode != 0)
-                return { false, tr("V2Ray core failed with an exit code: ") + QSTRN(exitCode) };
         } else {
             return { false, tr("V2Ray core failed with an exit code: ") + QSTRN(exitCode) };
         }
