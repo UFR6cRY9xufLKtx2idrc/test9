@@ -344,12 +344,12 @@ void PreferencesWindow::on_buttonBox_accepted()
     auto size = 0;
 
     { // kernel check scope
-        auto vcorePath = vCorePathTxt->text();
+        auto vCorePath = vCorePathTxt->text();
         auto vAssetsPath = vCoreAssetsPathTxt->text();
 
 #if QV2RAY_FEATURE(kernel_check_filename)
         // prevent some bullshit situations.
-        if (const auto vCorePathSmallCased = vcorePath.toLower(); vCorePathSmallCased.endsWith("qv2ray") || vCorePathSmallCased.endsWith("qv2ray.exe"))
+        if (const auto vCorePathSmallCased = vCorePath.toLower(); vCorePathSmallCased.endsWith("qv2ray") || vCorePathSmallCased.endsWith("qv2ray.exe"))
         {
             const auto content = tr("You may be about to set V2Ray core incorrectly to Qv2ray itself, which is absolutely not correct.\r\n"
                                     "This won't trigger a fork bomb, however, since Qv2ray works in singleton mode.\r\n"
@@ -365,7 +365,7 @@ void PreferencesWindow::on_buttonBox_accepted()
         }
 #endif
 
-        if (const auto &&[result, msg] = V2RayKernelInstance::ValidateVersionedKernel(vcorePath, vAssetsPath); !result)
+        if (const auto &&[result, msg] = V2RayKernelInstance::ValidateVersionedKernel(vCorePath, vAssetsPath); !result)
         {
             QvMessageBoxWarn(this, tr("V2Ray Core Settings"), *msg);
         }
@@ -791,12 +791,12 @@ void PreferencesWindow::on_fpPortSB_valueChanged(int arg1)
 
 void PreferencesWindow::on_checkVCoreSettings_clicked()
 {
-    auto vcorePath = vCorePathTxt->text();
+    auto vCorePath = vCorePathTxt->text();
     auto vAssetsPath = vCoreAssetsPathTxt->text();
 
 #if QV2RAY_FEATURE(kernel_check_filename)
     // prevent some bullshit situations.
-    if (const auto vCorePathSmallCased = vcorePath.toLower(); vCorePathSmallCased.endsWith("qv2ray") || vCorePathSmallCased.endsWith("qv2ray.exe"))
+    if (const auto vCorePathSmallCased = vCorePath.toLower(); vCorePathSmallCased.endsWith("qv2ray") || vCorePathSmallCased.endsWith("qv2ray.exe"))
     {
         const auto content = tr("You may be about to set V2Ray core incorrectly to Qv2ray itself, which is absolutely not correct.\r\n"
                                 "This won't trigger a fork bomb, however, since Qv2ray works in singleton mode.\r\n"
@@ -814,7 +814,7 @@ void PreferencesWindow::on_checkVCoreSettings_clicked()
 #endif
 #endif
 
-    if (const auto &&[result, msg] = V2RayKernelInstance::ValidateVersionedKernel(vcorePath, vAssetsPath); !result)
+    if (const auto &&[result, msg] = V2RayKernelInstance::ValidateVersionedKernel(vCorePath, vAssetsPath); !result)
     {
         QvMessageBoxWarn(this, tr("V2Ray Core Settings"), *msg);
     }
