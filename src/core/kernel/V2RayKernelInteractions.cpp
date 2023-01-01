@@ -182,23 +182,14 @@ namespace Qv2ray::core::kernel
             return { true, SplitLines(output).at(0) };
         }
 
-        if (output.startsWith("flag provided but not defined"))
+        if (output.startsWith("flag provided but not defined: -version"))
         {
             // find 5.0+ cli api
             std::tie(exitCode, output) = RunProcess_(corePath, {"version"});
+            if (exitCode != 0)
+                return { false, tr("V2Ray core failed with an exit code: ") + QSTRN(exitCode) };
 
             LOG("V2Ray output: " + SplitLines(output).join(";"));
-
-            if (exitCode == 0)
-            {
-                LOG("V2Ray output: " + SplitLines(output).join(";"));
-
-                if (SplitLines(output).isEmpty())
-                    return { false, tr("V2Ray core returns empty string.") };
-
-                KernelVersioning_(output);
-                return { true, SplitLines(output).at(0) };
-            }
         } else {
             return { false, tr("V2Ray core failed with an exit code: ") + QSTRN(exitCode) };
         }
