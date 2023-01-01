@@ -175,6 +175,11 @@ namespace Qv2ray::core::kernel
 
         LOG("V2Ray output: " + SplitLines(output).join(";"));
 
+        if (exitCode != 0)
+            return { false, tr("V2Ray core failed with an exit code: ") + QSTRN(exitCode) };
+
+        LOG("V2Ray output: " + SplitLines(output).join(";"));
+
         if (SplitLines(output).isEmpty())
             return { false, tr("V2Ray core returns empty string.") };
 
