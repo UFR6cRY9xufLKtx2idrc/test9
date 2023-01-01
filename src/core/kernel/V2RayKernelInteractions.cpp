@@ -182,7 +182,7 @@ namespace Qv2ray::core::kernel
             return { true, SplitLines(output).at(0) };
         }
 
-        if (output.startsWith("flag provided but not defined"))
+        if (output.startsWith("flag"))
         {
             // find 5.0+ cli api
             std::tie(exitCode, output) = RunProcess_(corePath, {"version"});
