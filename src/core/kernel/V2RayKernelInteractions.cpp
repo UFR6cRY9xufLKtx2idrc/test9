@@ -181,7 +181,7 @@ namespace Qv2ray::core::kernel
             KernelVersioning_(output);
             return { true, SplitLines(output).at(0) };
         }
-        else if (output.startsWith("flag"))
+        else if (SplitLines(output).startsWith("flag"))
         {
             // find 5.0+ cli api
             std::tie(exitCode, output) = RunProcess_(corePath, {"version"});
@@ -191,19 +191,16 @@ namespace Qv2ray::core::kernel
             if (exitCode != 0)
                 return { false, tr("V2Ray core failed with an exit code: ") + QSTRN(exitCode) };
 
-            LOG("V2Ray output: " + SplitLines(output).join(";"));
+            if (SplitLines(output).isEmpty())
+                return { false, tr("V2Ray core returns empty string.") };
+
+            KernelVersioning_(output);
+            return { true, SplitLines(output).at(0) };
         }
         else
         {
             return { false, tr("V2Ray core failed with an exit code: ") + QSTRN(exitCode) };
         }
-
-        if (SplitLines(output).isEmpty())
-            return { false, tr("V2Ray core returns empty string.") };
-
-        KernelVersioning_(output);
-
-        return { true, SplitLines(output).at(0) };
     }
 
     std::optional<QString> V2RayKernelInstance::ValidateConfig(const QString &path)
