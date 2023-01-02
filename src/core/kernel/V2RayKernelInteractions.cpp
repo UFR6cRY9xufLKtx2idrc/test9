@@ -181,7 +181,7 @@ namespace Qv2ray::core::kernel
             KernelVersioning_(output);
             return { true, SplitLines(output).at(0) };
         }
-        else if (SplitLines(output).startsWith("flag"))
+        else if (!output.startsWith("flag"))
         {
             // find 5.0+ cli api
             std::tie(exitCode, output) = RunProcess_(corePath, {"version"});
