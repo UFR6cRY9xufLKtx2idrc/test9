@@ -30,7 +30,7 @@ jobs:
         platform: [windows-latest]
         arch: [x64]
         build_type: [RelWithDebInfo, Release]
-        qt_version: [6.4.1]
+        qt_version: [6.4.2]
         include:
           - platform: windows-latest
             arch: x64
